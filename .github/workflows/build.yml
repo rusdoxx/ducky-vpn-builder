@@ -17,8 +17,8 @@ jobs:
 
       - name: 📥 Установка хакерских утилит (Apktool & Apksigner)
         run: |
-          # Качаем декомпилятор
-          wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O apktool.jar
+          # Используем новую, рабочую ссылку с GitHub
+          wget https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar -O apktool.jar
           # Ставим утилиты для подписи Android
           sudo apt-get update
           sudo apt-get install -y zipalign apksigner
