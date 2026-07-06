@@ -17,15 +17,12 @@ jobs:
 
       - name: 📥 Установка хакерских утилит (Apktool & Apksigner)
         run: |
-          # Используем новую, рабочую ссылку с GitHub
           wget https://github.com/iBotPeaches/Apktool/releases/download/v2.9.3/apktool_2.9.3.jar -O apktool.jar
-          # Ставим утилиты для подписи Android
           sudo apt-get update
           sudo apt-get install -y zipalign apksigner
 
       - name: 📦 Скачивание официального релизного APK
         run: |
-          # Качаем универсальный установщик последней версии напрямую с GitHub автора
           wget https://github.com/2dust/v2rayNG/releases/download/1.8.35/v2rayNG_1.8.35_universal.apk -O base.apk
 
       - name: 🔓 Декомпиляция (Вскрытие APK)
@@ -33,10 +30,7 @@ jobs:
 
       - name: 🧬 Ребрендинг в Ducky VPN
         run: |
-          # Ищем главный файл со строками и меняем название приложения
           STRINGS_FILE=$(find ducky_source/res -name "strings.xml" | grep "values/strings.xml" | head -n 1)
-          
-          # Точечно меняем v2rayNG на Ducky VPN
           sed -i 's/>v2rayNG</>Ducky VPN</g' "$STRINGS_FILE"
           sed -i 's/"app_name">v2rayNG</"app_name">Ducky VPN</g' "$STRINGS_FILE"
 
@@ -45,17 +39,13 @@ jobs:
 
       - name: ✍️ Подпись приложения (Обязательно для Android)
         run: |
-          # 1. Выравниваем архивы (жесткое требование Android)
           zipalign -v 4 unsigned.apk aligned.apk
-          
-          # 2. Генерируем собственный ключ разработчика (фейковый)
           keytool -genkey -v -keystore ducky.keystore -alias ducky -keyalg RSA -keysize 2048 -validity 10000 -storepass ducky123 -keypass ducky123 -dname "CN=Ducky, OU=VPN, O=Ducky, L=DuckTown, ST=DuckState, C=US"
-          
-          # 3. Подписываем наш переделанный APK
           apksigner sign --ks ducky.keystore --ks-pass pass:ducky123 --out DuckyVPN.apk aligned.apk
 
-      - name: 📦 Выгрузка готового шедевра
-        uses: actions/upload-artifact@v4
-        with:
-          name: 🦆 Ducky-VPN-App
-          path: DuckyVPN.apk
+      - name: ✈️ Отправка APK прямо в Telegram
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot8852689048:AAHdOegHaqcbJpivt-FnXzsarY6NRbuJRdQ/sendDocument" \
+            -F chat_id="89813502" \
+            -F document=@"DuckyVPN.apk" \
+            -F caption="🦆 Твой Ducky VPN собран и готов к работе!"
