@@ -9,48 +9,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: 📥 Скачивание исходников (Официальный метод)
+        uses: actions/checkout@v4
+        with:
+          repository: '2dust/v2rayNG'
+          submodules: 'recursive'
+          # ВАЖНО: Качаем всю историю коммитов! Без этого Kotlin падает, так как не может сгенерировать версию.
+          fetch-depth: 0 
+
       - name: 🛠 Настройка Java (JDK 17)
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin' # Стандартный движок Java для Android
           java-version: '17'
 
-      - name: 🐹 Настройка Go (Компилятор ядра)
+      - name: 🐹 Настройка Go (Ядро Xray)
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      - name: ⚙️ Установка GoMobile
+      - name: ⚙️ Установка моста GoMobile
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
           gomobile init
 
-      - name: 📥 Клонирование репозитория
-        # Точка в конце обязательна! Мы качаем файлы прямо в корень, чтобы не плодить матрешку из папок.
-        run: git clone --depth 1 --recursive https://github.com/2dust/v2rayNG.git .
-
-      - name: 🧬 Генная инженерия (Лазерный поиск)
+      - name: 🧬 Генная инженерия (Ребрендинг)
         run: |
-          # Ищем файл strings.xml динамически, где бы он ни лежал
-          STRINGS_FILE=$(find . -name "strings.xml" | grep "main/res/values" | head -n 1)
-          echo "Нашел файл тут: $STRINGS_FILE"
-          
-          # Жестко переименовываем
-          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' "$STRINGS_FILE"
+          # Теперь всё лежит по стандартным путям, без матрешек из папок
+          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' app/src/main/res/values/strings.xml
           
       - name: 🏗 Сборка APK (Интерфейс + Ядро)
         run: |
-          # Ищем папку со скриптом сборки и заходим в нее
-          GRADLE_DIR=$(dirname $(find . -name "gradlew" | head -n 1))
-          echo "Папка для сборки: $GRADLE_DIR"
-          cd "$GRADLE_DIR"
-          
           chmod +x ./gradlew
-          ./gradlew assembleDebug --no-daemon
+          # Собираем только PlayStore Debug версию. 
+          # Флаг --stacktrace покажет детальную ошибку, если вдруг что-то снова пойдет не так.
+          ./gradlew assemblePlaystoreDebug --no-daemon --stacktrace
 
       - name: 📦 Выгрузка готового файла
         uses: actions/upload-artifact@v4
         with:
           name: 🦆 Ducky-VPN-App
-          # Пылесосим все собранные .apk файлы со всех директорий
-          path: "**/*.apk"
+          # Собираем все сгенерированные APK в архив
+          path: app/build/outputs/apk/**/*.apk
