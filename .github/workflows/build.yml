@@ -1,52 +1,61 @@
-name: 🦆 Build Ducky VPN APK
+name: 🏴‍☠️ Build Ducky VPN (Pirate Edition)
 
 on:
   workflow_dispatch:
 
 jobs:
-  build-apk:
-    name: Сборка Ducky VPN
+  hack-apk:
+    name: Взлом и ребрендинг APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Скачивание исходников
-        uses: actions/checkout@v4
-        with:
-          repository: '2dust/v2rayNG'
-          submodules: 'recursive'
-          # ВАЖНО: Качаем всю историю для Kotlin
-          fetch-depth: 0 
-
-      - name: 🛠 Настройка Java (JDK 17)
+      - name: 🛠 Настройка Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 🐹 Настройка Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
+      - name: 📥 Установка хакерских утилит (Apktool & Apksigner)
+        run: |
+          # Качаем декомпилятор
+          wget https://bitbucket.org/iBotPeaches/apktool/downloads/apktool_2.9.3.jar -O apktool.jar
+          # Ставим утилиты для подписи Android
+          sudo apt-get update
+          sudo apt-get install -y zipalign apksigner
 
-      - name: ⚙️ Установка GoMobile
+      - name: 📦 Скачивание официального релизного APK
         run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
-          gomobile init
+          # Качаем универсальный установщик последней версии напрямую с GitHub автора
+          wget https://github.com/2dust/v2rayNG/releases/download/1.8.35/v2rayNG_1.8.35_universal.apk -O base.apk
 
-      - name: 🧬 Ребрендинг (Динамический поиск)
+      - name: 🔓 Декомпиляция (Вскрытие APK)
+        run: java -jar apktool.jar d base.apk -o ducky_source -f
+
+      - name: 🧬 Ребрендинг в Ducky VPN
         run: |
-          # Ищем strings.xml динамически, где бы он ни лежал
-          STRINGS_FILE=$(find . -name "strings.xml" | grep "main/res/values" | head -n 1)
-          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' "$STRINGS_FILE"
+          # Ищем главный файл со строками и меняем название приложения
+          STRINGS_FILE=$(find ducky_source/res -name "strings.xml" | grep "values/strings.xml" | head -n 1)
           
-      - name: 🏗 Сборка APK
+          # Точечно меняем v2rayNG на Ducky VPN
+          sed -i 's/>v2rayNG</>Ducky VPN</g' "$STRINGS_FILE"
+          sed -i 's/"app_name">v2rayNG</"app_name">Ducky VPN</g' "$STRINGS_FILE"
+
+      - name: 🔒 Сборка взломанного APK
+        run: java -jar apktool.jar b ducky_source -o unsigned.apk
+
+      - name: ✍️ Подпись приложения (Обязательно для Android)
         run: |
-          chmod +x ./gradlew
-          ./gradlew assemblePlaystoreDebug --no-daemon
+          # 1. Выравниваем архивы (жесткое требование Android)
+          zipalign -v 4 unsigned.apk aligned.apk
           
-      - name: 📦 Выгрузка
+          # 2. Генерируем собственный ключ разработчика (фейковый)
+          keytool -genkey -v -keystore ducky.keystore -alias ducky -keyalg RSA -keysize 2048 -validity 10000 -storepass ducky123 -keypass ducky123 -dname "CN=Ducky, OU=VPN, O=Ducky, L=DuckTown, ST=DuckState, C=US"
+          
+          # 3. Подписываем наш переделанный APK
+          apksigner sign --ks ducky.keystore --ks-pass pass:ducky123 --out DuckyVPN.apk aligned.apk
+
+      - name: 📦 Выгрузка готового шедевра
         uses: actions/upload-artifact@v4
         with:
           name: 🦆 Ducky-VPN-App
-          # Пылесосим все созданные APK отовсюду
-          path: "**/*.apk"
+          path: DuckyVPN.apk
