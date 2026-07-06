@@ -1,6 +1,5 @@
 name: 🦆 Build Ducky VPN APK
 
-# Запуск по кнопке (вручную) через интерфейс GitHub
 on:
   workflow_dispatch:
 
@@ -11,41 +10,32 @@ jobs:
 
     steps:
       - name: 🛠 Настройка Java (JDK 17)
-        uses: actions/setup-java@v3
+        # ОБНОВЛЕНО: v3 -> v4
+        uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
       - name: 📥 Клонирование топового ядра (v2rayNG)
-        # Скачиваем только последнюю версию, чтобы сэкономить время
         run: git clone --depth 1 https://github.com/2dust/v2rayNG.git .
 
       - name: 🧬 Генная инженерия (Ребрендинг в Ducky VPN)
         run: |
-          # 1. Меняем название приложения на Ducky VPN
+          # Меняем название приложения на Ducky VPN
           sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' app/src/main/res/values/strings.xml
           
-          # 2. Вырезаем лишние языки, если нужно (оставляем дефолт/русский/английский - опционально, пока пропустим для стабильности)
-          
-          # 3. Вшиваем твою ссылку в дефолтные настройки (Трюк с SharedPreferences)
-          # Так как v2rayNG хранит настройки в базе, мы заменяем дефолтные переменные в коде Java/Kotlin.
-          # Замени URL ниже на свой настоящий домен воркера!
+          # Твоя подписка
           export DUCKY_SUB="https://твой-домен.workers.dev/sub/owner"
-          
-          # Находим файл Utils или Config и пытаемся жестко прописать туда подписку
-          # (Это базовый пример инъекции, для глубокой вшивки потребуется легкий патч-файл, но мы сделаем проще:
-          # добавим скрипт, который при первом запуске приложения дернет твою ссылку).
           
       - name: ⚙️ Выдача прав сборщику Gradle
         run: chmod +x ./gradlew
 
-      - name: 🏗 Сборка APK (Debug-версия, чтобы не возиться с подписями и ключами)
-        # Собираем дебаг-версию. Она установится на любой телефон без лишних проверок Google Play.
+      - name: 🏗 Сборка APK (Debug-версия)
         run: ./gradlew assembleDebug --no-daemon
 
       - name: 📦 Выгрузка готового файла
-        uses: actions/upload-artifact@v3
+        # ОБНОВЛЕНО: v3 -> v4
+        uses: actions/upload-artifact@v4
         with:
           name: 🦆 Ducky-VPN-App
-          # Ищем собранный апк в недрах папок
           path: app/build/outputs/apk/debug/*.apk
