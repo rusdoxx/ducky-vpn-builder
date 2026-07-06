@@ -23,7 +23,8 @@ jobs:
 
       - name: 📦 Скачивание официального релизного APK
         run: |
-          wget https://github.com/2dust/v2rayNG/releases/download/1.8.35/v2rayNG_1.8.35_universal.apk -O base.apk
+          # ВАЖНО: Качаем версию arm64-v8a, которая весит 25 МБ и идеально проходит в лимиты Telegram
+          wget https://github.com/2dust/v2rayNG/releases/download/1.8.35/v2rayNG_1.8.35_arm64-v8a.apk -O base.apk
 
       - name: 🔓 Декомпиляция (Вскрытие APK)
         run: java -jar apktool.jar d base.apk -o ducky_source -f
