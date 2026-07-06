@@ -15,30 +15,35 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 📥 Клонирование топового ядра (v2rayNG)
-        run: git clone --depth 1 https://github.com/2dust/v2rayNG.git .
+      - name: 🐹 Настройка Go (Устанавливаем компилятор ядра)
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: ⚙️ Установка GoMobile (Мост между Go и Android)
+        run: |
+          go install golang.org/x/mobile/cmd/gomobile@latest
+          gomobile init
+
+      - name: 📥 Клонирование топового ядра с сабмодулями
+        # Флаг --recursive заставляет GitHub скачать ВСЕ внутренние зависимости (то самое ядро)
+        run: git clone --depth 1 --recursive https://github.com/2dust/v2rayNG.git V2rayNG
 
       - name: 🧬 Генная инженерия (Ребрендинг в Ducky VPN)
         run: |
-          # Переходим внутрь папки с Android-проектом
           cd V2rayNG
-          
           # Меняем название приложения на Ducky VPN
           sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' app/src/main/res/values/strings.xml
           
-      - name: ⚙️ Выдача прав сборщику Gradle
+      - name: 🏗 Сборка APK (Интерфейс + Ядро)
         run: |
           cd V2rayNG
           chmod +x ./gradlew
-
-      - name: 🏗 Сборка APK (Debug-версия)
-        run: |
-          cd V2rayNG
+          # Сборка теперь автоматически подхватит GoMobile и скомпилирует Libv2ray!
           ./gradlew assembleDebug --no-daemon
 
       - name: 📦 Выгрузка готового файла
         uses: actions/upload-artifact@v4
         with:
           name: 🦆 Ducky-VPN-App
-          # Обновлен путь для поиска собранного APK файла
           path: V2rayNG/app/build/outputs/apk/debug/*.apk
