@@ -15,28 +15,36 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: 🐹 Настройка Go (Устанавливаем компилятор ядра)
+      - name: 🐹 Настройка Go (Компилятор ядра)
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      - name: ⚙️ Установка GoMobile (Мост между Go и Android)
+      - name: ⚙️ Установка GoMobile
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
           gomobile init
 
-      - name: 📥 Клонирование топового ядра с сабмодулями
-        run: git clone --depth 1 --recursive https://github.com/2dust/v2rayNG.git V2rayNG
+      - name: 📥 Клонирование репозитория
+        # Точка в конце обязательна! Мы качаем файлы прямо в корень, чтобы не плодить матрешку из папок.
+        run: git clone --depth 1 --recursive https://github.com/2dust/v2rayNG.git .
 
-      - name: 🧬 Генная инженерия (Ребрендинг в Ducky VPN)
+      - name: 🧬 Генная инженерия (Лазерный поиск)
         run: |
-          cd V2rayNG
-          # Исправлен путь: папка называется v2rayNG, а не app
-          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' v2rayNG/src/main/res/values/strings.xml
+          # Ищем файл strings.xml динамически, где бы он ни лежал
+          STRINGS_FILE=$(find . -name "strings.xml" | grep "main/res/values" | head -n 1)
+          echo "Нашел файл тут: $STRINGS_FILE"
+          
+          # Жестко переименовываем
+          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' "$STRINGS_FILE"
           
       - name: 🏗 Сборка APK (Интерфейс + Ядро)
         run: |
-          cd V2rayNG
+          # Ищем папку со скриптом сборки и заходим в нее
+          GRADLE_DIR=$(dirname $(find . -name "gradlew" | head -n 1))
+          echo "Папка для сборки: $GRADLE_DIR"
+          cd "$GRADLE_DIR"
+          
           chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon
 
@@ -44,5 +52,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: 🦆 Ducky-VPN-App
-          # Исправлен путь поиска готового файла
-          path: V2rayNG/v2rayNG/build/outputs/apk/**/*.apk
+          # Пылесосим все собранные .apk файлы со всех директорий
+          path: "**/*.apk"
