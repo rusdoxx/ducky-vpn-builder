@@ -5,49 +5,48 @@ on:
 
 jobs:
   build-apk:
-    name: Ощипываем исходники и собираем APK
+    name: Сборка Ducky VPN
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Скачивание исходников (Официальный метод)
+      - name: 📥 Скачивание исходников
         uses: actions/checkout@v4
         with:
           repository: '2dust/v2rayNG'
           submodules: 'recursive'
-          # ВАЖНО: Качаем всю историю коммитов! Без этого Kotlin падает, так как не может сгенерировать версию.
+          # ВАЖНО: Качаем всю историю для Kotlin
           fetch-depth: 0 
 
       - name: 🛠 Настройка Java (JDK 17)
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin' # Стандартный движок Java для Android
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: 🐹 Настройка Go (Ядро Xray)
+      - name: 🐹 Настройка Go
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
 
-      - name: ⚙️ Установка моста GoMobile
+      - name: ⚙️ Установка GoMobile
         run: |
           go install golang.org/x/mobile/cmd/gomobile@latest
           gomobile init
 
-      - name: 🧬 Генная инженерия (Ребрендинг)
+      - name: 🧬 Ребрендинг (Динамический поиск)
         run: |
-          # Теперь всё лежит по стандартным путям, без матрешек из папок
-          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' app/src/main/res/values/strings.xml
+          # Ищем strings.xml динамически, где бы он ни лежал
+          STRINGS_FILE=$(find . -name "strings.xml" | grep "main/res/values" | head -n 1)
+          sed -i 's/<string name="app_name">v2rayNG<\/string>/<string name="app_name">Ducky VPN<\/string>/g' "$STRINGS_FILE"
           
-      - name: 🏗 Сборка APK (Интерфейс + Ядро)
+      - name: 🏗 Сборка APK
         run: |
           chmod +x ./gradlew
-          # Собираем только PlayStore Debug версию. 
-          # Флаг --stacktrace покажет детальную ошибку, если вдруг что-то снова пойдет не так.
-          ./gradlew assemblePlaystoreDebug --no-daemon --stacktrace
-
-      - name: 📦 Выгрузка готового файла
+          ./gradlew assemblePlaystoreDebug --no-daemon
+          
+      - name: 📦 Выгрузка
         uses: actions/upload-artifact@v4
         with:
           name: 🦆 Ducky-VPN-App
-          # Собираем все сгенерированные APK в архив
-          path: app/build/outputs/apk/**/*.apk
+          # Пылесосим все созданные APK отовсюду
+          path: "**/*.apk"
